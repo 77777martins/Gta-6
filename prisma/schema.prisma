@@ -69,8 +69,10 @@ model Order {
 }
 
 model Payment {
-  // ID do pagamento no Mercado Pago (numérico, armazenado como texto).
-  id                String   @id @db.VarChar(32)
+  // ID do pagamento no provedor: Mercado Pago (numérico) ou Pixoupay (UUID).
+  id                String   @id @db.VarChar(64)
+  // "mercadopago" | "pixoupay"
+  provider          String   @default("mercadopago") @db.VarChar(16)
   orderId           String   @db.Uuid
   order             Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
@@ -84,9 +86,14 @@ model Payment {
   amountMatches     Boolean
   mpDateApproved    DateTime?
   mpDateLastUpdated DateTime?
+  // PIX do Pixoupay: a consulta de status não devolve o QR Code, então ele é
+  // guardado na criação para reaproveitar a mesma cobrança (sem duplicar).
+  pixCode           String?
+  pixQrBase64       String?
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
   @@index([orderId])
+  @@index([provider])
 }

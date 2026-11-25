@@ -128,9 +128,12 @@ O site escolhe o modo pelas variáveis de ambiente, nesta prioridade:
 
 | Modo | Ativado por | Como funciona |
 |---|---|---|
+| **PIX via Pixoupay** | `PIXOUPAY_SECRET_TOKEN` (+ `PIXOUPAY_WEBHOOK_TOKEN`) | QR Code PIX na própria página, processado pelo Pixoupay. O Pixoupay **não processa cartão**: a aba de cartão só aparece se a Public Key do Mercado Pago também estiver configurada. |
 | **Checkout Transparente** | `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | PIX (QR Code na página) e cartão (Card Payment Brick) **sem sair do site**. Pedido salvo, confirmação automática por webhook e evento de compra no pixel. |
 | **Link de pagamento** | `MERCADOPAGO_PAYMENT_LINK_PS5` / `_XBOX_SERIES` / `MERCADOPAGO_PAYMENT_LINK` | Redireciona para o link criado no app do Mercado Pago. Vendas ficam só no Mercado Pago. |
 | **Checkout Pro** | nenhuma das anteriores | Cria a preferência e redireciona para o Mercado Pago. |
+
+**Pixoupay — segurança:** a documentação do Pixoupay informa que o webhook **não tem assinatura HMAC**. Por isso: (1) a URL do webhook leva um token secreto (`PIXOUPAY_WEBHOOK_TOKEN`, comparado em tempo constante; o site envia essa URL em cada cobrança via `postbackUrl`); (2) o conteúdo do webhook é ignorado — só o `id` é usado, e o status é **sempre confirmado** em `GET /transaction` antes de gravar; (3) só são aceitos ids de cobranças criadas por este site; (4) "pago" nunca volta para "pendente"; (5) valor divergente nunca aprova.
 
 **Checkout Transparente — requisitos:** `MERCADOPAGO_ACCESS_TOKEN` e `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` **do mesmo par de credenciais** (produção), `MERCADOPAGO_WEBHOOK_SECRET` do webhook em **modo produção** e `APP_URL` correto.
 

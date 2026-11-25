@@ -6,7 +6,8 @@ import { PixPanel } from "./PixPanel";
 
 type Props = {
   orderId: string;
-  publicKey: string;
+  /** Sem Public Key do Mercado Pago, só o PIX é oferecido. */
+  publicKey: string | null;
   email: string;
   maxInstallments: number;
   onBack: () => void;
@@ -42,13 +43,17 @@ export function TransparentPayment({ orderId, publicKey, email, maxInstallments,
         </button>
       </div>
 
-      <div role="tablist" aria-label="Forma de pagamento" className="mb-6 flex gap-2 rounded-lg border border-line bg-ink p-1">
-        {tab("pix", "PIX")}
-        {tab("card", "Cartão de crédito")}
-      </div>
+      {publicKey ? (
+        <div role="tablist" aria-label="Forma de pagamento" className="mb-6 flex gap-2 rounded-lg border border-line bg-ink p-1">
+          {tab("pix", "PIX")}
+          {tab("card", "Cartão de crédito")}
+        </div>
+      ) : (
+        <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-gold">Pagamento via PIX</p>
+      )}
 
       <div id={`panel-${method}`} role="tabpanel">
-        {method === "pix" ? (
+        {method === "pix" || !publicKey ? (
           <PixPanel orderId={orderId} />
         ) : (
           <CardPanel orderId={orderId} publicKey={publicKey} email={email} maxInstallments={maxInstallments} />

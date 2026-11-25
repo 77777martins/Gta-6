@@ -1,10 +1,12 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { IMAGES } from "@/assets";
+import type { PaymentCopy } from "@/lib/payment-copy";
 import { PLATFORMS, PRODUCT } from "@/config/product";
 import { CheckIcon, ClockIcon, GamepadIcon, KeyIcon, MailIcon, ShieldIcon } from "./icons";
 
-const items: { icon: ReactNode; title: string; text: string }[] = [
+function buildItems(payment: PaymentCopy): { icon: ReactNode; title: string; text: string }[] {
+  return [
   { icon: <CheckIcon />, title: `${PRODUCT.editionName} completa`, text: PRODUCT.completeDescription },
   {
     icon: <GamepadIcon />,
@@ -19,11 +21,15 @@ const items: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <ShieldIcon />,
     title: "Pagamento seguro",
-    text: "Processado pelo Mercado Pago. Não armazenamos dados do seu cartão.",
+    text: payment.cardEnabled
+      ? `Processado por ${payment.processor}. Não armazenamos dados do seu cartão.`
+      : `PIX processado por ${payment.processor}, com confirmação automática.`,
   },
-];
+  ];
+}
 
-export function Benefits() {
+export function Benefits({ payment }: { payment: PaymentCopy }) {
+  const items = buildItems(payment);
   return (
     <section aria-labelledby="beneficios" className="border-t border-line/60 bg-ink py-20">
       <div className="container-page">

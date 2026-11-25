@@ -2,13 +2,14 @@ import Image from "next/image";
 import { IMAGES } from "@/assets";
 import { PRODUCT } from "@/config/product";
 import { formatCents } from "@/lib/format";
+import type { PaymentCopy } from "@/lib/payment-copy";
 
 /**
  * Banner de chamada intermediária (segundo CTA antes do checkout).
  * - Mobile: arte em 16:9 e texto abaixo (não cobre os personagens).
  * - sm+: texto sobre o céu, à esquerda da arte.
  */
-export function PromoBanner({ salesEnabled }: { salesEnabled: boolean }) {
+export function PromoBanner({ salesEnabled, payment }: { salesEnabled: boolean; payment: PaymentCopy }) {
   return (
     <section aria-labelledby="promo-title" className="relative isolate overflow-hidden bg-ink">
       <div className="relative aspect-video w-full lg:aspect-[21/9]">
@@ -32,7 +33,7 @@ export function PromoBanner({ salesEnabled }: { salesEnabled: boolean }) {
             Sua próxima jogada começa aqui
           </h2>
           <p className="mt-3 text-zinc-300 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)] sm:text-zinc-200">
-            {PRODUCT.shortName} por {formatCents(PRODUCT.priceCents)}, com pagamento seguro via PIX ou cartão.
+            {PRODUCT.shortName} por {formatCents(PRODUCT.priceCents)}, com pagamento seguro via {payment.methods}.
           </p>
           <a href="#comprar" className="btn-primary mt-5 w-full sm:w-auto">
             {salesEnabled ? "Garantir o meu" : "Ver detalhes"}

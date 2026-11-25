@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { PLATFORMS, PRODUCT } from "@/config/product";
 import { formatCents } from "@/lib/format";
+import type { PaymentCopy } from "@/lib/payment-copy";
 import { CheckIcon } from "./icons";
 import { IMAGES } from "@/assets";
 
@@ -18,7 +19,7 @@ import { IMAGES } from "@/assets";
  * DIREITOS DE USO: a arte é propriedade da Rockstar Games/Take-Two. Use apenas
  * com autorização (ex.: material de marketing fornecido ao revendedor oficial).
  */
-export function Hero({ salesEnabled }: { salesEnabled: boolean }) {
+export function Hero({ salesEnabled, payment }: { salesEnabled: boolean; payment: PaymentCopy }) {
   return (
     <section className="relative isolate overflow-hidden bg-ink">
       <div className="relative aspect-video max-h-[88svh] w-full">
@@ -45,7 +46,7 @@ export function Hero({ salesEnabled }: { salesEnabled: boolean }) {
               Grand Theft Auto <span className="text-blood">VI</span>
             </h1>
             <p className="mt-4 max-w-xl text-base text-zinc-200 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)] sm:text-lg">
-              Garanta sua cópia digital com pagamento 100% seguro via PIX ou cartão de crédito e confirmação automática
+              Garanta sua cópia digital com pagamento 100% seguro via {payment.methods} e confirmação automática
               do pagamento.
             </p>
             <ul className="mt-5 flex flex-wrap gap-2" aria-label="Plataformas">
@@ -68,7 +69,7 @@ export function Hero({ salesEnabled }: { salesEnabled: boolean }) {
             <p className="font-[family-name:var(--font-display)] text-5xl font-black text-gold">
               {formatCents(PRODUCT.priceCents)}
             </p>
-            <p className="mt-1 text-sm text-zinc-400">PIX ou cartão de crédito via Mercado Pago</p>
+            <p className="mt-1 text-sm text-zinc-400">{payment.methods} via {payment.processor}</p>
             <a href="#comprar" className="btn-primary mt-5 w-full">
               {salesEnabled ? "Comprar agora" : "Ver detalhes"}
             </a>

@@ -8,7 +8,7 @@ import { formatCents } from "@/lib/format";
 import "./globals.css";
 
 const ogImage = IMAGES.hero.src;
-const description = `Compre ${PRODUCT.shortName} por ${formatCents(PRODUCT.priceCents)}. Pagamento seguro via PIX ou cartão de crédito pelo Mercado Pago.`;
+const description = `Compre ${PRODUCT.shortName} por ${formatCents(PRODUCT.priceCents)}. Pagamento seguro via PIX com confirmação automática.`;
 
 export const metadata: Metadata = {
   title: `${PRODUCT.shortName} | ${STORE.name}`,

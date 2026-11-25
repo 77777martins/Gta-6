@@ -11,6 +11,11 @@ import {
   getPayment,
   type MercadoPagoPayment,
 } from "@/server/mercadopago/client";
+import {
+  getPixoupayTransaction,
+  normalizePixoupayStatus,
+  type PixoupayStatus,
+} from "@/server/pixoupay/client";
 import { IdempotencyConflictError, SalesClosedError } from "./errors";
 import { deriveOrderStatus, isPayable, toCents } from "./status";
 
@@ -133,17 +138,50 @@ export async function syncPayment(paymentId: string): Promise<OrderStatus | null
   return recordPayment(await getPayment(paymentId));
 }
 
-/**
- * Registra o estado de um pagamento do Mercado Pago (vindo da API, nunca do
- * cliente) e recalcula o status do pedido. Usado pelo webhook, pela página de
- * retorno e pela criação de pagamentos PIX/cartão.
- */
+/** Pagamento já convertido para o formato interno, independente do provedor. */
+export type NormalizedPayment = {
+  provider: "mercadopago" | "pixoupay";
+  id: string;
+  orderId: string;
+  status: string;
+  statusDetail: string | null;
+  paymentMethodId: string | null;
+  paymentTypeId: string | null;
+  amountCents: number;
+  currency: string;
+  dateApproved: Date | null;
+  dateLastUpdated: Date | null;
+  /** Só na criação de PIX do Pixoupay (a consulta não devolve o QR Code). */
+  pix?: { code: string; qrBase64: string };
+};
+
+/** Registra um pagamento do Mercado Pago (vindo da API, nunca do navegador). */
 export async function recordPayment(payment: MercadoPagoPayment): Promise<OrderStatus | null> {
-  const paymentId = payment.id;
-  const orderId = payment.external_reference ?? "";
+  return recordNormalizedPayment({
+    provider: "mercadopago",
+    id: payment.id,
+    orderId: payment.external_reference ?? "",
+    status: payment.status,
+    statusDetail: payment.status_detail ?? null,
+    paymentMethodId: payment.payment_method_id ?? null,
+    paymentTypeId: payment.payment_type_id ?? null,
+    amountCents: toCents(payment.transaction_amount),
+    currency: payment.currency_id,
+    dateApproved: payment.date_approved ? new Date(payment.date_approved) : null,
+    dateLastUpdated: payment.date_last_updated ? new Date(payment.date_last_updated) : null,
+  });
+}
+
+/**
+ * Grava o estado de um pagamento e recalcula o status do pedido. Usado pelos
+ * webhooks, pela página de retorno e pela criação de PIX/cartão.
+ * Seguro para chamadas concorrentes: trava a linha do pedido durante o recálculo.
+ */
+export async function recordNormalizedPayment(payment: NormalizedPayment): Promise<OrderStatus | null> {
+  const { id: paymentId, orderId } = payment;
 
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) {
-    logger.warn("payment.sync.unknown_reference", { paymentId });
+    logger.warn("payment.sync.unknown_reference", { paymentId, provider: payment.provider });
     return null;
   }
 
@@ -156,37 +194,49 @@ export async function recordPayment(payment: MercadoPagoPayment): Promise<OrderS
     }
     const order = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
 
-    const amountCents = toCents(payment.transaction_amount);
-    const amountMatches = amountCents === order.totalCents && payment.currency_id === order.currency;
+    const amountMatches = payment.amountCents === order.totalCents && payment.currency === order.currency;
     if (!amountMatches) {
       logger.error("payment.sync.amount_mismatch", {
         paymentId,
         orderId,
         expectedCents: order.totalCents,
-        receivedCents: amountCents,
-        currency: payment.currency_id,
+        receivedCents: payment.amountCents,
+        currency: payment.currency,
       });
     }
 
-    const lastUpdated = payment.date_last_updated ? new Date(payment.date_last_updated) : null;
-    const existing = await tx.payment.findUnique({ where: { id: payment.id } });
-    const isStale = existing?.mpDateLastUpdated && lastUpdated && lastUpdated < existing.mpDateLastUpdated;
+    const existing = await tx.payment.findUnique({ where: { id: paymentId } });
+    if (existing && existing.orderId !== orderId) {
+      logger.error("payment.sync.order_mismatch", { paymentId, orderId, storedOrderId: existing.orderId });
+      return null;
+    }
+    const isStale =
+      existing?.mpDateLastUpdated && payment.dateLastUpdated && payment.dateLastUpdated < existing.mpDateLastUpdated;
+    // Pixoupay não informa data de atualização: um "pago" nunca volta para "pendente".
+    const wouldDowngrade = payment.provider === "pixoupay" && existing?.status === "approved" && payment.status !== "approved";
 
-    if (!isStale) {
+    if (!isStale && !wouldDowngrade) {
       const fields = {
         status: payment.status,
-        statusDetail: payment.status_detail ?? null,
-        paymentMethodId: payment.payment_method_id ?? null,
-        paymentTypeId: payment.payment_type_id ?? null,
-        amountCents,
-        currency: payment.currency_id,
+        statusDetail: payment.statusDetail,
+        paymentMethodId: payment.paymentMethodId,
+        paymentTypeId: payment.paymentTypeId,
+        amountCents: payment.amountCents,
+        currency: payment.currency,
         amountMatches,
-        mpDateApproved: payment.date_approved ? new Date(payment.date_approved) : null,
-        mpDateLastUpdated: lastUpdated,
+        mpDateApproved: payment.dateApproved ?? existing?.mpDateApproved ?? null,
+        mpDateLastUpdated: payment.dateLastUpdated,
       };
       await tx.payment.upsert({
-        where: { id: payment.id },
-        create: { id: payment.id, orderId, ...fields },
+        where: { id: paymentId },
+        create: {
+          id: paymentId,
+          provider: payment.provider,
+          orderId,
+          ...fields,
+          pixCode: payment.pix?.code ?? null,
+          pixQrBase64: payment.pix?.qrBase64 ?? null,
+        },
         update: fields,
       });
     }
@@ -205,14 +255,55 @@ export async function recordPayment(payment: MercadoPagoPayment): Promise<OrderS
   });
 }
 
+/**
+ * Sincroniza um pagamento do Pixoupay já registrado (o webhook do Pixoupay não
+ * tem assinatura: por isso o status SEMPRE é confirmado na API antes de gravar).
+ */
+export async function syncPixoupayPayment(paymentId: string): Promise<OrderStatus | null> {
+  const stored = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: { orderId: true, provider: true },
+  });
+  if (!stored || stored.provider !== "pixoupay") {
+    logger.warn("pixoupay.sync.unknown_payment", { paymentId });
+    return null;
+  }
+  const tx = await getPixoupayTransaction(paymentId);
+  return recordNormalizedPayment(normalizePixoupay(tx, stored.orderId));
+}
+
+export function normalizePixoupay(
+  tx: { id: string; status: PixoupayStatus; total_amount: number },
+  orderId: string,
+  pix?: { code: string; qrBase64: string },
+): NormalizedPayment {
+  const status = normalizePixoupayStatus(tx.status);
+  return {
+    provider: "pixoupay",
+    id: tx.id,
+    orderId,
+    status,
+    statusDetail: tx.status,
+    paymentMethodId: "pix",
+    paymentTypeId: "bank_transfer",
+    amountCents: tx.total_amount,
+    currency: "BRL",
+    dateApproved: status === "approved" ? new Date() : null,
+    dateLastUpdated: null,
+    ...(pix ? { pix } : {}),
+  };
+}
+
 /** Re-sincroniza pedidos pendentes cujo pagamento conhecido não é consultado há algum tempo. */
 export async function refreshPendingOrder(orderId: string, minAgeMs = 30_000): Promise<void> {
   const payment = await prisma.payment.findFirst({
     where: { orderId, order: { status: "PENDING" }, updatedAt: { lt: new Date(Date.now() - minAgeMs) } },
     orderBy: { updatedAt: "desc" },
-    select: { id: true },
+    select: { id: true, provider: true },
   });
-  if (payment) await syncPayment(payment.id);
+  if (!payment) return;
+  if (payment.provider === "pixoupay") await syncPixoupayPayment(payment.id);
+  else await syncPayment(payment.id);
 }
 
 export type PublicOrderView = {

@@ -10,21 +10,21 @@ import { env } from "@/lib/env";
  * As respostas são revalidadas com Zod: o restante do sistema depende apenas
  * dos campos que realmente usa, não da forma completa da API.
  */
-export class PaymentProviderError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-    this.name = "PaymentProviderError";
-  }
-}
+import { PaymentProviderError } from "@/server/payments/errors";
+
+export { PaymentProviderError };
 
 let config: MercadoPagoConfig | undefined;
 
+function accessToken(): string {
+  const token = env().MERCADOPAGO_ACCESS_TOKEN;
+  if (!token) throw new PaymentProviderError("Mercado Pago não configurado (MERCADOPAGO_ACCESS_TOKEN)", 503);
+  return token;
+}
+
 function mpConfig(): MercadoPagoConfig {
   config ??= new MercadoPagoConfig({
-    accessToken: env().MERCADOPAGO_ACCESS_TOKEN,
+    accessToken: accessToken(),
     options: { timeout: 10_000, maxRetries: 2 },
   });
   return config;
@@ -45,7 +45,7 @@ function toProviderError(operation: string, error: unknown): PaymentProviderErro
 
 /** Impressão digital da credencial atual (SHA-256 truncado; nunca o token em si). */
 export function credentialFingerprint(): string {
-  return createHash("sha256").update(env().MERCADOPAGO_ACCESS_TOKEN).digest("hex").slice(0, 16);
+  return createHash("sha256").update(env().MERCADOPAGO_ACCESS_TOKEN ?? "none").digest("hex").slice(0, 16);
 }
 
 export function isMercadoPagoHost(hostname: string): boolean {

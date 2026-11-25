@@ -6,7 +6,8 @@ import { PaymentLinkCheckout } from "./PaymentLinkCheckout";
 type Props = {
   salesEnabled: boolean;
   paymentLinks: PaymentLinks | null;
-  transparent: { publicKey: string; maxInstallments: number } | null;
+  transparent: { publicKey: string | null; maxInstallments: number } | null;
+  paymentNote: string;
 };
 
 /**
@@ -15,7 +16,7 @@ type Props = {
  * 2. Link de pagamento (links configurados)
  * 3. Checkout Pro (redirecionamento)
  */
-export function CheckoutSection({ salesEnabled, paymentLinks, transparent }: Props) {
+export function CheckoutSection({ salesEnabled, paymentLinks, transparent, paymentNote }: Props) {
   const useLinks = !transparent && paymentLinks;
   return (
     <section id="comprar" aria-labelledby="checkout-title" className="scroll-mt-4 bg-gradient-to-b from-ink to-ink-2/40 py-20">
@@ -31,9 +32,9 @@ export function CheckoutSection({ salesEnabled, paymentLinks, transparent }: Pro
         </p>
         <div className="mt-10">
           {useLinks ? (
-            <PaymentLinkCheckout salesEnabled={salesEnabled} links={paymentLinks} supportText={supportChannelText()} />
+            <PaymentLinkCheckout salesEnabled={salesEnabled} links={paymentLinks} supportText={supportChannelText()} paymentNote={paymentNote} />
           ) : (
-            <CheckoutForm salesEnabled={salesEnabled} transparent={transparent} />
+            <CheckoutForm salesEnabled={salesEnabled} transparent={transparent} paymentNote={paymentNote} />
           )}
         </div>
       </div>

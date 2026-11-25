@@ -4,7 +4,7 @@ import { PLATFORMS, PRODUCT, type PlatformId } from "@/config/product";
 import { formatCents } from "@/lib/format";
 import { LockIcon } from "../icons";
 
-export function OrderSummary({ platform }: { platform?: PlatformId }) {
+export function OrderSummary({ platform, paymentNote }: { platform?: PlatformId; paymentNote: string }) {
   const image = productImageFor(platform);
   return (
     <aside aria-labelledby="resumo" className="rounded-xl border border-gold/30 bg-ink-2 p-6 lg:sticky lg:top-6">
@@ -48,7 +48,7 @@ export function OrderSummary({ platform }: { platform?: PlatformId }) {
         </div>
       </dl>
       <p className="mt-5 flex items-center gap-2 text-xs text-zinc-500">
-        <LockIcon width={16} height={16} /> Pagamento processado pelo Mercado Pago (PIX ou cartão de crédito).
+        <LockIcon width={16} height={16} /> {paymentNote}
       </p>
     </aside>
   );

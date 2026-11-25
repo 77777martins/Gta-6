@@ -10,13 +10,14 @@ type Props = {
   salesEnabled: boolean;
   links: Partial<Record<PlatformId, string>>;
   supportText: string | null;
+  paymentNote: string;
 };
 
 /**
  * Checkout simplificado: o cliente escolhe a plataforma e é levado ao link de
  * pagamento do Mercado Pago, que coleta nome, e-mail, CPF e processa PIX/cartão.
  */
-export function PaymentLinkCheckout({ salesEnabled, links, supportText }: Props) {
+export function PaymentLinkCheckout({ salesEnabled, links, supportText, paymentNote }: Props) {
   const available = PLATFORM_IDS.filter((id) => links[id]);
   const [platform, setPlatform] = useState<PlatformId | undefined>(available.length === 1 ? available[0] : undefined);
   const [accepted, setAccepted] = useState(false);
@@ -102,7 +103,7 @@ export function PaymentLinkCheckout({ salesEnabled, links, supportText }: Props)
         </fieldset>
       </div>
 
-      <OrderSummary platform={platform} />
+      <OrderSummary platform={platform} paymentNote={paymentNote} />
     </div>
   );
 }

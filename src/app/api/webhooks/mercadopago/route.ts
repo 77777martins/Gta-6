@@ -28,11 +28,14 @@ export async function POST(request: NextRequest) {
   const dataId = url.searchParams.get("data.id");
   const type = url.searchParams.get("type") ?? url.searchParams.get("topic");
 
+  const secret = env().MERCADOPAGO_WEBHOOK_SECRET;
+  if (!secret) return jsonError(503, "webhook not configured");
+
   const signature = verifyWebhookSignature({
     xSignature: request.headers.get("x-signature"),
     xRequestId: request.headers.get("x-request-id"),
     dataId,
-    secret: env().MERCADOPAGO_WEBHOOK_SECRET,
+    secret,
   });
   if (!signature.valid) {
     logger.warn("webhook.invalid_signature", { ip: clientIp(request.headers), type, reason: signature.reason });

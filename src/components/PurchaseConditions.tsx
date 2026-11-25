@@ -1,7 +1,8 @@
 import { PRODUCT } from "@/config/product";
+import type { PaymentCopy } from "@/lib/payment-copy";
 
 /** Condições de compra na própria página (CDC art. 49 e LGPD), sem páginas extras. */
-export function PurchaseConditions() {
+export function PurchaseConditions({ payment }: { payment: PaymentCopy }) {
   const items = [
     { title: "O que está incluído", text: PRODUCT.completeDescription },
     { title: "Entrega", text: PRODUCT.delivery },
@@ -11,7 +12,7 @@ export function PurchaseConditions() {
     },
     {
       title: "Pagamento",
-      text: "Processado pelo Mercado Pago. O pedido só é confirmado após a aprovação do pagamento, validada automaticamente pelo nosso sistema.",
+      text: `Processado por ${payment.processor} (${payment.methods}). O pedido só é confirmado após a aprovação do pagamento, validada automaticamente pelo nosso sistema.`,
     },
     {
       title: "Privacidade (LGPD)",

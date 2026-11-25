@@ -27,10 +27,11 @@ function isTrustedCheckoutUrl(value: unknown): value is string {
 type Props = {
   salesEnabled: boolean;
   /** Presente quando o Checkout Transparente está ativo (pagamento dentro do site). */
-  transparent?: { publicKey: string; maxInstallments: number } | null;
+  transparent?: { publicKey: string | null; maxInstallments: number } | null;
+  paymentNote: string;
 };
 
-export function CheckoutForm({ salesEnabled, transparent }: Props) {
+export function CheckoutForm({ salesEnabled, transparent, paymentNote }: Props) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<{ orderId: string; email: string } | null>(null);
   const [redirecting, setRedirecting] = useState(false);
@@ -108,7 +109,7 @@ export function CheckoutForm({ salesEnabled, transparent }: Props) {
           maxInstallments={transparent.maxInstallments}
           onBack={() => setPaymentStep(null)}
         />
-        <OrderSummary platform={platform} />
+        <OrderSummary platform={platform} paymentNote={paymentNote} />
       </div>
     );
   }
@@ -226,13 +227,15 @@ export function CheckoutForm({ salesEnabled, transparent }: Props) {
           </button>
           <p className="text-center text-xs text-zinc-500">
             {transparent
-              ? "Na próxima etapa você paga aqui mesmo, com PIX ou cartão de crédito, em ambiente seguro do Mercado Pago."
+              ? transparent.publicKey
+                ? "Na próxima etapa você paga aqui mesmo, com PIX ou cartão de crédito."
+                : "Na próxima etapa você paga aqui mesmo, com PIX."
               : "Você será direcionado ao ambiente seguro do Mercado Pago para pagar com PIX ou cartão."}
           </p>
         </fieldset>
       </form>
 
-      <OrderSummary platform={platform} />
+      <OrderSummary platform={platform} paymentNote={paymentNote} />
     </div>
   );
 }

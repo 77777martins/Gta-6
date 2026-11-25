@@ -21,8 +21,15 @@ const schema = z.object({
     .string()
     .optional()
     .transform((v) => parseBooleanFlag(v)),
-  MERCADOPAGO_ACCESS_TOKEN: z.string().min(20),
-  MERCADOPAGO_WEBHOOK_SECRET: z.string().min(16),
+  // Opcionais: o site pode operar só com Pixoupay (PIX) ou só com links de pagamento.
+  MERCADOPAGO_ACCESS_TOKEN: z.string().min(20).optional(),
+  MERCADOPAGO_WEBHOOK_SECRET: z.string().min(16).optional(),
+  PIXOUPAY_SECRET_TOKEN: z.string().min(10).optional(),
+  // Token aleatório que vai na URL do webhook do Pixoupay (que não tem assinatura).
+  PIXOUPAY_WEBHOOK_TOKEN: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{24,128}$/, "use 24+ caracteres: letras, números, - ou _")
+    .optional(),
   MERCADOPAGO_MAX_INSTALLMENTS: z.coerce.number().int().min(1).max(12).default(12),
   MERCADOPAGO_STATEMENT_DESCRIPTOR: z
     .string()
@@ -94,8 +101,20 @@ export function getMercadoPagoPublicKey(): string | null {
   return parseMercadoPagoPublicKey(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY);
 }
 
+/** PIX via Pixoupay fica ativo quando o Secret Token está configurado. */
+export function isPixoupayEnabled(): boolean {
+  return (process.env.PIXOUPAY_SECRET_TOKEN ?? "").trim().length >= 10;
+}
+
+/** Pagamento dentro do site: PIX (Pixoupay ou Mercado Pago) e/ou cartão (Mercado Pago). */
 export function isTransparentCheckout(): boolean {
-  return getMercadoPagoPublicKey() !== null;
+  return isPixoupayEnabled() || getMercadoPagoPublicKey() !== null;
+}
+
+/** Provedor do PIX: Pixoupay tem prioridade; senão, Mercado Pago (se a Public Key existir). */
+export function pixProvider(): "pixoupay" | "mercadopago" | null {
+  if (isPixoupayEnabled()) return "pixoupay";
+  return getMercadoPagoPublicKey() ? "mercadopago" : null;
 }
 
 /** Parcelas máximas para a interface (sem exigir o env completo). */

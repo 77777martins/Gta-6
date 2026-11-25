@@ -5,7 +5,7 @@ import { formatDateTime } from "@/lib/format";
 import { AlertIcon, CheckIcon } from "../../icons";
 import { StatusPoller } from "../../payment/StatusPoller";
 
-type Pix = { qrCode: string; qrCodeBase64: string; ticketUrl: string | null; expiresAt: string };
+type Pix = { qrCode: string; qrCodeBase64: string; ticketUrl: string | null; expiresAt: string | null };
 
 export function PixPanel({ orderId }: { orderId: string }) {
   const [pix, setPix] = useState<Pix | null>(null);
@@ -103,7 +103,11 @@ export function PixPanel({ orderId }: { orderId: string }) {
           )}
         </button>
       </div>
-      <p className="text-xs text-zinc-500">Válido até {formatDateTime(new Date(pix.expiresAt))} (horário de Brasília).</p>
+      <p className="text-xs text-zinc-500">
+        {pix.expiresAt
+          ? `Válido até ${formatDateTime(new Date(pix.expiresAt))} (horário de Brasília).`
+          : "Pague logo após gerar: o QR Code tem validade limitada."}
+      </p>
       {error && <p className="text-sm text-red-300">{error}</p>}
       <StatusPoller orderId={orderId} />
     </div>

@@ -21,7 +21,7 @@ const CONTENT: Record<OrderStatus | "UNKNOWN", { tone: Tone; title: string; text
     tone: "warning",
     title: "Pagamento pendente",
     text: () =>
-      "Estamos aguardando a confirmação do Mercado Pago. Se você pagou com PIX, a confirmação costuma ser rápida e esta página atualiza sozinha.",
+      "Estamos aguardando a confirmação do pagamento. Se você pagou com PIX, a confirmação costuma ser rápida e esta página atualiza sozinha.",
   },
   REJECTED: {
     tone: "danger",
@@ -90,7 +90,7 @@ export function PaymentResult({ order }: { order: PublicOrderView | null }) {
             <Row label="Data do pedido">{formatDateTime(order.createdAt)}</Row>
             {order.paidAt && <Row label="Pagamento confirmado">{formatDateTime(order.paidAt)}</Row>}
             {order.paymentType && (
-              <Row label="Forma de pagamento">{PAYMENT_LABEL[order.paymentType] ?? "Mercado Pago"}</Row>
+              <Row label="Forma de pagamento">{PAYMENT_LABEL[order.paymentType] ?? "Pagamento online"}</Row>
             )}
             <Row label="Produto">{order.productName}</Row>
             <Row label="Total">

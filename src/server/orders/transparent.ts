@@ -2,7 +2,7 @@ import "server-only";
 import type { Order } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { toSaoPauloIso } from "@/lib/datetime";
-import { env } from "@/lib/env";
+import { env, pixProvider } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { isValidCpf } from "@/lib/validation/cpf";
 import type { CardPaymentInput } from "@/lib/validation/card-payment";
@@ -14,7 +14,8 @@ import {
   type MercadoPagoPayment,
 } from "@/server/mercadopago/client";
 import { OrderNotPayableError, PaymentInputError } from "./errors";
-import { recordPayment } from "./service";
+import { normalizePixoupay, recordNormalizedPayment, recordPayment } from "./service";
+import { createPixoupayCharge, getPixoupayTransaction } from "@/server/pixoupay/client";
 import { isPayable, toCents } from "./status";
 
 /** Validade do QR Code PIX. */
@@ -59,7 +60,11 @@ function additionalInfo(order: Order): CreatePaymentBody["additional_info"] {
 
 // ---------------------------------------------------------------- PIX
 
-export type PixData = { qrCode: string; qrCodeBase64: string; ticketUrl: string | null; expiresAt: string };
+/** `expiresAt` pode faltar: o Pixoupay não informa a validade do QR Code. */
+export type PixData = { qrCode: string; qrCodeBase64: string; ticketUrl: string | null; expiresAt: string | null };
+
+/** Janela em que um QR Code do Pixoupay ainda pendente é reaproveitado. */
+const PIXOUPAY_REUSE_MS = 20 * 60 * 1000;
 
 function extractPix(payment: MercadoPagoPayment): PixData | null {
   const data = payment.point_of_interaction?.transaction_data;
@@ -82,9 +87,10 @@ function extractPix(payment: MercadoPagoPayment): PixData | null {
  */
 export async function createPixPayment(orderId: string): Promise<PixData> {
   const order = await loadPayableOrder(orderId);
+  if (pixProvider() === "pixoupay") return createPixoupayPix(order);
 
   const pixPayments = await prisma.payment.findMany({
-    where: { orderId, paymentMethodId: "pix" },
+    where: { orderId, provider: "mercadopago", paymentMethodId: "pix" },
     orderBy: { createdAt: "desc" },
     select: { id: true, status: true },
   });
@@ -177,4 +183,51 @@ export async function createCardPayment(
   const orderStatus = await recordPayment(payment);
   logger.info("card.processed", { orderId, paymentId: payment.id, status: payment.status, detail: payment.status_detail });
   return { status: payment.status, statusDetail: payment.status_detail ?? null, orderStatus };
+}
+
+// ---------------------------------------------------------------- PIX (Pixoupay)
+
+/**
+ * PIX pelo Pixoupay. O `external_id` é único por vendedor na Pixoupay, então cada
+ * nova cobrança do mesmo pedido recebe um sufixo (pedido_1, pedido_2...).
+ * Um QR Code recente e ainda pendente é reaproveitado (sem cobrança duplicada).
+ */
+async function createPixoupayPix(order: Order): Promise<PixData> {
+  const previous = await prisma.payment.findMany({
+    where: { orderId: order.id, provider: "pixoupay" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, status: true, createdAt: true, pixCode: true, pixQrBase64: true },
+  });
+
+  const recent = previous[0];
+  if (recent?.status === "pending" && recent.pixCode && recent.pixQrBase64 && Date.now() - recent.createdAt.getTime() < PIXOUPAY_REUSE_MS) {
+    // Confirma na API que ainda está pendente antes de reexibir.
+    const current = await getPixoupayTransaction(recent.id);
+    await recordNormalizedPayment(normalizePixoupay(current, order.id));
+    if (current.status === "pending") {
+      return { qrCode: recent.pixCode, qrCodeBase64: recent.pixQrBase64, ticketUrl: null, expiresAt: null };
+    }
+  }
+
+  const { APP_URL, PIXOUPAY_WEBHOOK_TOKEN } = env();
+  const charge = await createPixoupayCharge({
+    externalId: `${order.id}_${previous.length + 1}`,
+    amountCents: order.totalCents,
+    buyer: {
+      name: order.customerName,
+      email: order.customerEmail,
+      document: order.customerCpf,
+      phone: order.customerPhone,
+    },
+    productName: order.productName,
+    ...(PIXOUPAY_WEBHOOK_TOKEN
+      ? { postbackUrl: `${APP_URL}/api/webhooks/pixoupay?token=${encodeURIComponent(PIXOUPAY_WEBHOOK_TOKEN)}` }
+      : {}),
+  });
+
+  await recordNormalizedPayment(
+    normalizePixoupay(charge, order.id, { code: charge.pix.code, qrBase64: charge.pix.qrcode_base64 }),
+  );
+  logger.info("pix.created", { orderId: order.id, provider: "pixoupay", paymentId: charge.id });
+  return { qrCode: charge.pix.code, qrCodeBase64: charge.pix.qrcode_base64, ticketUrl: null, expiresAt: null };
 }
