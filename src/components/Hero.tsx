@@ -40,7 +40,7 @@ export function Hero({ salesEnabled }: { salesEnabled: boolean }) {
       <div className="container-page relative -mt-6 pb-14 lg:-mt-28 lg:pb-16">
         <div className="animate-rise lg:flex lg:items-end lg:justify-between lg:gap-10">
           <div className="max-w-2xl">
-            <p className="eyebrow">Jogo completo · Edição Padrão · Digital</p>
+            <p className="eyebrow">{PRODUCT.editionName} · Jogo completo · Digital</p>
             <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-black uppercase leading-[0.95] tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] sm:text-6xl">
               Grand Theft Auto <span className="text-blood">VI</span>
             </h1>

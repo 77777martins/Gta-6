@@ -5,7 +5,7 @@ import { PLATFORMS, PRODUCT } from "@/config/product";
 import { CheckIcon, ClockIcon, GamepadIcon, KeyIcon, MailIcon, ShieldIcon } from "./icons";
 
 const items: { icon: ReactNode; title: string; text: string }[] = [
-  { icon: <CheckIcon />, title: PRODUCT.completeLabel, text: PRODUCT.completeDescription },
+  { icon: <CheckIcon />, title: `${PRODUCT.editionName} completa`, text: PRODUCT.completeDescription },
   {
     icon: <GamepadIcon />,
     title: "Plataformas",
