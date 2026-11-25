@@ -103,6 +103,22 @@ npm run typecheck && npm run lint
    **Docker:** `docker build -t gta6-store . && docker run --env-file .env -p 3000:3000 gta6-store`.
 6. Só então `SALES_ENABLED=true`.
 
+## Imagens
+
+Todas as imagens ficam em `src/assets/` e são registradas em `src/assets/index.ts` (com texto alternativo). O `next/image` gera AVIF/WebP no tamanho de cada dispositivo e um placeholder borrado durante o carregamento.
+
+| Arquivo | Onde aparece |
+|---|---|
+| `hero-gta6.jpg` | Capa (hero) e prévia de compartilhamento (Open Graph) |
+| `promo-car.webp` | Seção de benefícios |
+| `banner-heist.webp` | Banner com segunda chamada para compra |
+| `box-ps5.webp` | Resumo do pedido quando a plataforma é PS5 |
+| `cover-square.webp` | Resumo do pedido sem plataforma / Xbox |
+
+Para trocar uma imagem, substitua o arquivo mantendo o nome. Para adicionar a capa de Xbox, inclua-a em `src/assets/index.ts` (`productImageFor`).
+
+> ⚠️ As artes são propriedade da Rockstar Games/Take-Two. Use somente com autorização (ex.: material de marketing fornecido ao revendedor).
+
 ## Segurança implementada
 
 - Credenciais apenas no servidor (`src/lib/env.ts` é `server-only` e validado com Zod).

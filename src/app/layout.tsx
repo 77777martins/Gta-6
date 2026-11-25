@@ -2,10 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { PRODUCT } from "@/config/product";
 import { STORE } from "@/config/store";
-import heroImage from "@/assets/hero-gta6.jpg";
+import { IMAGES } from "@/assets";
 import { formatCents } from "@/lib/format";
 import "./globals.css";
 
+const ogImage = IMAGES.hero.src;
 const description = `Compre ${PRODUCT.shortName} por ${formatCents(PRODUCT.priceCents)}. Pagamento seguro via PIX ou cartão de crédito pelo Mercado Pago.`;
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     description,
     type: "website",
     locale: "pt_BR",
-    images: [{ url: heroImage.src, width: heroImage.width, height: heroImage.height }],
+    images: [{ url: ogImage.src, width: ogImage.width, height: ogImage.height, alt: IMAGES.hero.alt }],
   },
   robots: { index: true, follow: true },
 };

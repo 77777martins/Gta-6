@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { PLATFORMS, PRODUCT } from "@/config/product";
 import { formatCents } from "@/lib/format";
-import heroImage from "@/assets/hero-gta6.jpg";
+import { IMAGES } from "@/assets";
 
 /**
  * Capa com arte promocional do jogo.
@@ -22,8 +22,8 @@ export function Hero({ salesEnabled }: { salesEnabled: boolean }) {
     <section className="relative isolate overflow-hidden bg-ink">
       <div className="relative aspect-video max-h-[88svh] w-full">
         <Image
-          src={heroImage}
-          alt="Arte promocional de Grand Theft Auto VI com os protagonistas e cenas de Leonida"
+          src={IMAGES.hero.src}
+          alt={IMAGES.hero.alt}
           fill
           priority
           placeholder="blur"

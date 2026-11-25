@@ -1,6 +1,7 @@
 import { Benefits } from "@/components/Benefits";
 import { CheckoutSection } from "@/components/checkout/CheckoutSection";
 import { Hero } from "@/components/Hero";
+import { PromoBanner } from "@/components/PromoBanner";
 import { PurchaseConditions } from "@/components/PurchaseConditions";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -15,6 +16,7 @@ export default function HomePage() {
       <main>
         <Hero salesEnabled={salesEnabled} />
         <Benefits />
+        <PromoBanner salesEnabled={salesEnabled} />
         <CheckoutSection salesEnabled={salesEnabled} />
         <PurchaseConditions />
       </main>
