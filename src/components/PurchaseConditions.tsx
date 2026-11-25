@@ -3,6 +3,7 @@ import { PRODUCT } from "@/config/product";
 /** Condições de compra na própria página (CDC art. 49 e LGPD), sem páginas extras. */
 export function PurchaseConditions() {
   const items = [
+    { title: "O que está incluído", text: PRODUCT.completeDescription },
     { title: "Entrega", text: PRODUCT.delivery },
     {
       title: "Direito de arrependimento",

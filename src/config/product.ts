@@ -24,6 +24,11 @@ export const PRODUCT = {
   shortName: "GRAND THEFT AUTO VI",
   priceCents: 29_990,
   currency: "BRL",
+  /** Selo curto exibido em destaque. */
+  completeLabel: "Jogo completo",
+  /** Explicação do que está (e não está) incluído — evita expectativa errada do cliente. */
+  completeDescription:
+    "Versão completa do jogo base (Edição Padrão): não é demo nem versão de teste. Conteúdos adicionais (DLCs) e itens de edições especiais não estão incluídos.",
   licenseType: "Licença digital de uso pessoal, vinculada à conta da plataforma escolhida.",
   delivery:
     "Entrega digital: o código de ativação é enviado para o e-mail informado após a confirmação do pagamento.",

@@ -29,6 +29,7 @@ export function OrderSummary({ platform }: { platform?: PlatformId }) {
             Plataforma: {platform ? PLATFORMS[platform].label : <span className="text-zinc-500">selecione</span>}
           </p>
           <p className="text-sm text-zinc-400">Quantidade: 1</p>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-gold">{PRODUCT.completeLabel}</p>
           <p className="mt-2 font-semibold">{formatCents(PRODUCT.priceCents)}</p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { PLATFORMS, PRODUCT } from "@/config/product";
 import { formatCents } from "@/lib/format";
+import { CheckIcon } from "./icons";
 import { IMAGES } from "@/assets";
 
 /**
@@ -39,7 +40,7 @@ export function Hero({ salesEnabled }: { salesEnabled: boolean }) {
       <div className="container-page relative -mt-6 pb-14 lg:-mt-28 lg:pb-16">
         <div className="animate-rise lg:flex lg:items-end lg:justify-between lg:gap-10">
           <div className="max-w-2xl">
-            <p className="eyebrow">Edição Padrão · Mídia Digital</p>
+            <p className="eyebrow">Jogo completo · Edição Padrão · Digital</p>
             <h1 className="mt-3 font-[family-name:var(--font-display)] text-4xl font-black uppercase leading-[0.95] tracking-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)] sm:text-6xl">
               Grand Theft Auto <span className="text-blood">VI</span>
             </h1>
@@ -60,7 +61,10 @@ export function Hero({ salesEnabled }: { salesEnabled: boolean }) {
           </div>
 
           <div className="mt-8 rounded-xl border border-gold/30 bg-black/60 p-6 backdrop-blur-md lg:mt-0 lg:min-w-[320px]">
-            <p className="text-sm uppercase tracking-widest text-mist">Por apenas</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/50 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-gold">
+              <CheckIcon width={14} height={14} /> {PRODUCT.completeLabel}
+            </span>
+            <p className="mt-3 text-sm uppercase tracking-widest text-mist">Por apenas</p>
             <p className="font-[family-name:var(--font-display)] text-5xl font-black text-gold">
               {formatCents(PRODUCT.priceCents)}
             </p>
