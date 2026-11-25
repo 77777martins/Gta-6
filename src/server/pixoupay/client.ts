@@ -35,9 +35,15 @@ async function request(path: string, init: RequestInit): Promise<unknown> {
   const json = (await response.json().catch(() => null)) as unknown;
   if (!response.ok) {
     // Só a mensagem curta de erro vai para o log; nunca o corpo inteiro.
-    const message = z.object({ error: z.object({ message: z.string() }) }).safeParse(json);
+    // O "detail" ajuda o suporte do Pixoupay a diagnosticar; é truncado e sem dados do comprador.
+    const parsed = z
+      .object({ error: z.object({ message: z.string(), detail: z.unknown().optional() }) })
+      .safeParse(json);
+    const detail = parsed.success && parsed.data.error.detail !== undefined
+      ? ` — ${JSON.stringify(parsed.data.error.detail).slice(0, 300)}`
+      : "";
     throw new PaymentProviderError(
-      `Pixoupay ${path}: HTTP ${response.status}${message.success ? ` (${message.data.error.message})` : ""}`,
+      `Pixoupay ${path}: HTTP ${response.status}${parsed.success ? ` (${parsed.data.error.message}${detail})` : ""}`,
       response.status,
     );
   }
