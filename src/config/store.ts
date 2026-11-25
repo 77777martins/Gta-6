@@ -27,6 +27,16 @@ export function formatStorePhone(): string | null {
     : `+55 (${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
 }
 
+/**
+ * Canal de atendimento disponível, para textos ao cliente.
+ * Prioridade: WhatsApp (se configurado) > e-mail > nenhum.
+ */
+export function supportChannelText(): string | null {
+  if (/^\d{12,13}$/.test(STORE.whatsapp)) return "pelo WhatsApp (botão no canto da tela)";
+  if (STORE.email) return `pelo e-mail ${STORE.email}`;
+  return null;
+}
+
 export function whatsappLink(message: string): string | null {
   if (!/^\d{12,13}$/.test(STORE.whatsapp)) return null;
   return `https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent(message)}`;

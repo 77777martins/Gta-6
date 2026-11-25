@@ -1,6 +1,7 @@
 import type { OrderStatus } from "@prisma/client";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { supportChannelText } from "@/config/store";
 import { formatCents, formatDateTime, formatOrderNumber } from "@/lib/format";
 import type { PublicOrderView } from "@/server/orders/service";
 import { AlertIcon, CheckIcon, ClockIcon } from "../icons";
@@ -102,7 +103,9 @@ export function PaymentResult({ order }: { order: PublicOrderView | null }) {
           <ol className="mt-5 space-y-1 text-left text-sm text-zinc-400">
             <li>1. Guarde o número do pedido acima.</li>
             <li>2. Acompanhe seu e-mail (verifique também o spam/lixo eletrônico).</li>
-            <li>3. Dúvidas? Fale com o atendimento pelo WhatsApp informando o número do pedido.</li>
+            {supportChannelText() && (
+              <li>3. Dúvidas? Fale com o atendimento {supportChannelText()} informando o número do pedido.</li>
+            )}
           </ol>
         )}
 

@@ -139,7 +139,7 @@ export function CheckoutForm({ salesEnabled }: { salesEnabled: boolean }) {
 
           <div>
             <label htmlFor="phone" className="mb-1.5 block text-sm font-semibold">
-              Celular / WhatsApp <span className="font-normal text-zinc-500">(opcional)</span>
+              Celular <span className="font-normal text-zinc-500">(opcional)</span>
             </label>
             <input id="phone" type="tel" inputMode="tel" autoComplete="tel-national" className="field-input"
               placeholder="(11) 91234-5678" maxLength={15} aria-invalid={!!errors.phone}
