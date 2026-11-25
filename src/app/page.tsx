@@ -6,10 +6,11 @@ import { PurchaseConditions } from "@/components/PurchaseConditions";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { isSalesEnabled } from "@/lib/env";
+import { getPaymentLinks, isSalesEnabled } from "@/lib/env";
 
 export default function HomePage() {
   const salesEnabled = isSalesEnabled();
+  const paymentLinks = getPaymentLinks();
   return (
     <>
       <SiteHeader />
@@ -17,7 +18,7 @@ export default function HomePage() {
         <Hero salesEnabled={salesEnabled} />
         <Benefits />
         <PromoBanner salesEnabled={salesEnabled} />
-        <CheckoutSection salesEnabled={salesEnabled} />
+        <CheckoutSection salesEnabled={salesEnabled} paymentLinks={paymentLinks} />
         <PurchaseConditions />
       </main>
       <SiteFooter />

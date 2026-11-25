@@ -1,6 +1,12 @@
+import { supportChannelText } from "@/config/store";
+import type { PaymentLinks } from "@/lib/env";
 import { CheckoutForm } from "./CheckoutForm";
+import { PaymentLinkCheckout } from "./PaymentLinkCheckout";
 
-export function CheckoutSection({ salesEnabled }: { salesEnabled: boolean }) {
+type Props = { salesEnabled: boolean; paymentLinks: PaymentLinks | null };
+
+/** Usa link de pagamento quando configurado; senão, o checkout integrado completo. */
+export function CheckoutSection({ salesEnabled, paymentLinks }: Props) {
   return (
     <section id="comprar" aria-labelledby="checkout-title" className="scroll-mt-4 bg-gradient-to-b from-ink to-ink-2/40 py-20">
       <div className="container-page">
@@ -9,10 +15,16 @@ export function CheckoutSection({ salesEnabled }: { salesEnabled: boolean }) {
           Finalize sua compra
         </h2>
         <p className="mt-3 max-w-2xl text-zinc-400">
-          Preencha seus dados, escolha a plataforma e conclua o pagamento. A confirmação é automática.
+          {paymentLinks
+            ? "Escolha a plataforma e conclua o pagamento no Mercado Pago, com PIX ou cartão de crédito."
+            : "Preencha seus dados, escolha a plataforma e conclua o pagamento. A confirmação é automática."}
         </p>
         <div className="mt-10">
-          <CheckoutForm salesEnabled={salesEnabled} />
+          {paymentLinks ? (
+            <PaymentLinkCheckout salesEnabled={salesEnabled} links={paymentLinks} supportText={supportChannelText()} />
+          ) : (
+            <CheckoutForm salesEnabled={salesEnabled} />
+          )}
         </div>
       </div>
     </section>

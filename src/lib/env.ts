@@ -1,5 +1,7 @@
 import "server-only";
 import { z } from "zod";
+import { PLATFORM_IDS, type PlatformId } from "@/config/product";
+import { sanitizePaymentLink } from "@/lib/validation/payment-link";
 
 /**
  * Variáveis de ambiente validadas na primeira leitura. Falha cedo e de forma
@@ -62,4 +64,23 @@ export function isSalesEnabled(): boolean {
 export function parseBooleanFlag(value: string | undefined): boolean {
   const normalized = (value ?? "").trim().replace(/^["']|["']$/g, "").trim().toLowerCase();
   return normalized === "true" || normalized === "1";
+}
+
+export type PaymentLinks = Partial<Record<PlatformId, string>>;
+
+/**
+ * Modo "link de pagamento": se houver links do Mercado Pago configurados, o site
+ * redireciona para eles em vez de usar a integração via API.
+ * - MERCADOPAGO_PAYMENT_LINK_PS5 / MERCADOPAGO_PAYMENT_LINK_XBOX_SERIES: um link por plataforma (recomendado)
+ * - MERCADOPAGO_PAYMENT_LINK: link único, usado para plataformas sem link próprio
+ * Retorna null quando nenhum link válido existe (modo integração completa).
+ */
+export function getPaymentLinks(): PaymentLinks | null {
+  const fallback = sanitizePaymentLink(process.env.MERCADOPAGO_PAYMENT_LINK);
+  const links: PaymentLinks = {};
+  for (const id of PLATFORM_IDS) {
+    const link = sanitizePaymentLink(process.env[`MERCADOPAGO_PAYMENT_LINK_${id}`]) ?? fallback;
+    if (link) links[id] = link;
+  }
+  return Object.keys(links).length > 0 ? links : null;
 }
