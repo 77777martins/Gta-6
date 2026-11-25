@@ -8,11 +8,13 @@ generator client {
 }
 
 // DATABASE_URL: conexão com pooling (usada pela aplicação, ideal para serverless).
-// DIRECT_URL: conexão direta, sem pooler (usada apenas para aplicar migrações).
+// DATABASE_URL_UNPOOLED: conexão direta, sem pooler (usada apenas nas migrações).
+// Os dois nomes são os criados automaticamente pela integração Neon da Vercel
+// (com prefixo "DATABASE").
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum OrderStatus {
