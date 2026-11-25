@@ -24,6 +24,16 @@ export function deriveOrderStatus(payments: PaymentSnapshot[]): OrderStatus {
   return "PENDING";
 }
 
+/**
+ * Status em que o pedido ainda aceita (nova) tentativa de pagamento:
+ * recusado ou PIX expirado podem tentar de novo; pago/estornado/contestado, não.
+ */
+export const PAYABLE_STATUSES: readonly OrderStatus[] = ["PENDING", "REJECTED", "CANCELLED"];
+
+export function isPayable(status: OrderStatus): boolean {
+  return PAYABLE_STATUSES.includes(status);
+}
+
 /** Rota de resultado correspondente a cada status. */
 export type ResultSlug = "aprovado" | "pendente" | "recusado";
 

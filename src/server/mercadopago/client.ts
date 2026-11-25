@@ -141,6 +141,18 @@ const paymentSchema = z.object({
   payment_type_id: z.string().nullish(),
   date_approved: z.string().nullish(),
   date_last_updated: z.string().nullish(),
+  date_of_expiration: z.string().nullish(),
+  point_of_interaction: z
+    .object({
+      transaction_data: z
+        .object({
+          qr_code: z.string().nullish(),
+          qr_code_base64: z.string().nullish(),
+          ticket_url: z.string().nullish(),
+        })
+        .nullish(),
+    })
+    .nullish(),
 });
 
 export type MercadoPagoPayment = z.infer<typeof paymentSchema>;
@@ -158,5 +170,25 @@ export async function getPayment(paymentId: string): Promise<MercadoPagoPayment>
 
   const parsed = paymentSchema.safeParse(response);
   if (!parsed.success) throw new PaymentProviderError("Resposta inesperada ao consultar pagamento", 502);
+  return parsed.data;
+}
+
+// ---------- Criação de pagamento (Checkout Transparente) ----------
+
+export type CreatePaymentBody = NonNullable<Parameters<Payment["create"]>[0]>["body"];
+
+/**
+ * Cria um pagamento direto (PIX ou cartão tokenizado). A chave de idempotência
+ * garante que um retry da mesma tentativa não gere cobrança duplicada.
+ */
+export async function createPayment(body: CreatePaymentBody, idempotencyKey: string): Promise<MercadoPagoPayment> {
+  let response: unknown;
+  try {
+    response = await new Payment(mpConfig()).create({ body, requestOptions: { idempotencyKey } });
+  } catch (error) {
+    throw toProviderError("criar pagamento", error);
+  }
+  const parsed = paymentSchema.safeParse(response);
+  if (!parsed.success) throw new PaymentProviderError("Resposta inesperada ao criar pagamento", 502);
   return parsed.data;
 }

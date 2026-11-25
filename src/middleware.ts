@@ -5,6 +5,15 @@ import { NextResponse, type NextRequest } from "next/server";
  * O Next.js lê o nonce do header CSP da requisição e o aplica aos próprios scripts.
  * Estilos usam 'unsafe-inline' porque atributos style não aceitam nonce (risco baixo).
  */
+/** Domínios do Mercado Pago usados pelo SDK JS e pelo Card Payment Brick. */
+const MP = [
+  "https://*.mercadopago.com",
+  "https://*.mercadopago.com.br",
+  "https://*.mercadolibre.com",
+  "https://*.mercadolivre.com",
+  "https://*.mlstatic.com",
+].join(" ");
+
 export function middleware(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const isDev = process.env.NODE_ENV !== "production";
@@ -13,11 +22,13 @@ export function middleware(request: NextRequest) {
     "default-src 'self'",
     // 'strict-dynamic': scripts injetados pelo nosso código (pixels, após consentimento)
     // são permitidos; os hosts abaixo valem só para navegadores sem suporte a ele.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://connect.facebook.net https://analytics.tiktok.com${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://connect.facebook.net https://analytics.tiktok.com https://sdk.mercadopago.com ${MP}${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://www.facebook.com https://*.tiktok.com",
-    "font-src 'self'",
-    "connect-src 'self' https://www.facebook.com https://connect.facebook.net https://*.tiktok.com",
+    `img-src 'self' data: blob: https://www.facebook.com https://*.tiktok.com ${MP}`,
+    // Card Payment Brick: campos do cartão em iframes seguros do Mercado Pago.
+    `frame-src ${MP}`,
+    `font-src 'self' https://*.mlstatic.com`,
+    `connect-src 'self' https://www.facebook.com https://connect.facebook.net https://*.tiktok.com ${MP}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

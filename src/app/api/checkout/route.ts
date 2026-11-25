@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { env } from "@/lib/env";
+import { env, isTransparentCheckout } from "@/lib/env";
 import { clientIp, isSameOrigin, jsonError } from "@/lib/http";
 import { logger } from "@/lib/logger";
 import { rateLimit } from "@/lib/rate-limit";
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await createCheckout(parsed.data, idempotencyKey.data);
+    const result = await createCheckout(parsed.data, idempotencyKey.data, { transparent: isTransparentCheckout() });
     return NextResponse.json(result, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof SalesClosedError) {

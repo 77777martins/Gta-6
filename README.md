@@ -122,6 +122,24 @@ Para trocar uma imagem, substitua o arquivo mantendo o nome. Para adicionar a ca
 
 > ⚠️ As artes são propriedade da Rockstar Games/Take-Two. Use somente com autorização (ex.: material de marketing fornecido ao revendedor).
 
+## Modos de pagamento
+
+O site escolhe o modo pelas variáveis de ambiente, nesta prioridade:
+
+| Modo | Ativado por | Como funciona |
+|---|---|---|
+| **Checkout Transparente** | `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` | PIX (QR Code na página) e cartão (Card Payment Brick) **sem sair do site**. Pedido salvo, confirmação automática por webhook e evento de compra no pixel. |
+| **Link de pagamento** | `MERCADOPAGO_PAYMENT_LINK_PS5` / `_XBOX_SERIES` / `MERCADOPAGO_PAYMENT_LINK` | Redireciona para o link criado no app do Mercado Pago. Vendas ficam só no Mercado Pago. |
+| **Checkout Pro** | nenhuma das anteriores | Cria a preferência e redireciona para o Mercado Pago. |
+
+**Checkout Transparente — requisitos:** `MERCADOPAGO_ACCESS_TOKEN` e `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` **do mesmo par de credenciais** (produção), `MERCADOPAGO_WEBHOOK_SECRET` do webhook em **modo produção** e `APP_URL` correto.
+
+Garantias do modo transparente:
+- Os dados do cartão são digitados em iframes do Mercado Pago e viram um token de uso único; o servidor nunca vê o número do cartão.
+- O valor é sempre o do pedido no banco; um valor diferente vindo do navegador é rejeitado.
+- QR Code PIX ainda válido é reaproveitado (sem cobranças duplicadas); chave de idempotência por tentativa de cartão; bloqueio de nova cobrança enquanto um cartão está em análise.
+- Pedido recusado ou com PIX expirado aceita nova tentativa; pedido pago não aceita.
+
 ## Anúncios (Meta e TikTok)
 
 Defina `NEXT_PUBLIC_META_PIXEL_ID` e/ou `NEXT_PUBLIC_TIKTOK_PIXEL_ID` na Vercel e faça Redeploy.

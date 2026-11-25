@@ -6,11 +6,13 @@ import { PurchaseConditions } from "@/components/PurchaseConditions";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
-import { getPaymentLinks, isSalesEnabled } from "@/lib/env";
+import { getMaxInstallments, getMercadoPagoPublicKey, getPaymentLinks, isSalesEnabled } from "@/lib/env";
 
 export default function HomePage() {
   const salesEnabled = isSalesEnabled();
   const paymentLinks = getPaymentLinks();
+  const publicKey = getMercadoPagoPublicKey();
+  const transparent = publicKey ? { publicKey, maxInstallments: getMaxInstallments() } : null;
   return (
     <>
       <SiteHeader />
@@ -18,7 +20,7 @@ export default function HomePage() {
         <Hero salesEnabled={salesEnabled} />
         <Benefits />
         <PromoBanner salesEnabled={salesEnabled} />
-        <CheckoutSection salesEnabled={salesEnabled} paymentLinks={paymentLinks} />
+        <CheckoutSection salesEnabled={salesEnabled} paymentLinks={paymentLinks} transparent={transparent} />
         <PurchaseConditions />
       </main>
       <SiteFooter />

@@ -5,14 +5,20 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { logger, maskEmail } from "@/lib/logger";
 import type { CheckoutData } from "@/lib/validation/checkout";
-import { createPreference, credentialFingerprint, getPayment } from "@/server/mercadopago/client";
+import {
+  createPreference,
+  credentialFingerprint,
+  getPayment,
+  type MercadoPagoPayment,
+} from "@/server/mercadopago/client";
 import { IdempotencyConflictError, SalesClosedError } from "./errors";
-import { deriveOrderStatus, toCents } from "./status";
+import { deriveOrderStatus, isPayable, toCents } from "./status";
 
 /** Janela em que um pedido pendente idêntico é reaproveitado em vez de duplicado. */
 const DUPLICATE_WINDOW_MS = 15 * 60 * 1000;
 
-export type CheckoutResult = { orderId: string; checkoutUrl: string };
+/** `checkoutUrl` só existe no modo Checkout Pro (redirecionamento). */
+export type CheckoutResult = { orderId: string; checkoutUrl?: string };
 
 /**
  * Cria (ou reaproveita) um pedido e sua preferência no Mercado Pago.
@@ -23,13 +29,18 @@ export type CheckoutResult = { orderId: string; checkoutUrl: string };
  *    (inclusive se a criação da preferência falhou antes — evita pedidos órfãos).
  * 3. X-Idempotency-Key derivada do pedido na chamada ao Mercado Pago.
  */
-export async function createCheckout(data: CheckoutData, idempotencyKey: string): Promise<CheckoutResult> {
+export async function createCheckout(
+  data: CheckoutData,
+  idempotencyKey: string,
+  options: { transparent?: boolean } = {},
+): Promise<CheckoutResult> {
+  const finish = (order: Order) => (options.transparent ? ensurePayable(order) : ensurePreference(order));
   if (!env().SALES_ENABLED) throw new SalesClosedError();
 
   const byKey = await prisma.order.findUnique({ where: { idempotencyKey } });
   if (byKey) {
     if (byKey.customerEmail !== data.email || byKey.platform !== data.platform) throw new IdempotencyConflictError();
-    return ensurePreference(byKey);
+    return finish(byKey);
   }
 
   const recent = await prisma.order.findFirst({
@@ -43,7 +54,7 @@ export async function createCheckout(data: CheckoutData, idempotencyKey: string)
   });
   if (recent) {
     logger.info("checkout.reused_pending_order", { orderId: recent.id });
-    return ensurePreference(recent);
+    return finish(recent);
   }
 
   let order: Order;
@@ -68,13 +79,19 @@ export async function createCheckout(data: CheckoutData, idempotencyKey: string)
     // Corrida entre duas requisições com a mesma chave: devolve o pedido vencedor.
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const existing = await prisma.order.findUniqueOrThrow({ where: { idempotencyKey } });
-      return ensurePreference(existing);
+      return finish(existing);
     }
     throw error;
   }
 
   logger.info("checkout.order_created", { orderId: order.id, email: maskEmail(order.customerEmail) });
-  return ensurePreference(order);
+  return finish(order);
+}
+
+/** Modo transparente: o pedido só precisa estar aguardando pagamento. */
+function ensurePayable(order: Order): CheckoutResult {
+  if (!isPayable(order.status)) throw new IdempotencyConflictError();
+  return { orderId: order.id };
 }
 
 async function ensurePreference(order: Order): Promise<CheckoutResult> {
@@ -113,7 +130,16 @@ async function ensurePreference(order: Order): Promise<CheckoutResult> {
  * Retorna o status atual do pedido, ou null se o pagamento não for desta loja.
  */
 export async function syncPayment(paymentId: string): Promise<OrderStatus | null> {
-  const payment = await getPayment(paymentId);
+  return recordPayment(await getPayment(paymentId));
+}
+
+/**
+ * Registra o estado de um pagamento do Mercado Pago (vindo da API, nunca do
+ * cliente) e recalcula o status do pedido. Usado pelo webhook, pela página de
+ * retorno e pela criação de pagamentos PIX/cartão.
+ */
+export async function recordPayment(payment: MercadoPagoPayment): Promise<OrderStatus | null> {
+  const paymentId = payment.id;
   const orderId = payment.external_reference ?? "";
 
   if (!/^[0-9a-f-]{36}$/i.test(orderId)) {

@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { PLATFORM_IDS, type PlatformId } from "@/config/product";
+import { parseMercadoPagoPublicKey } from "@/lib/validation/mp-public-key";
 import { sanitizePaymentLink } from "@/lib/validation/payment-link";
 
 /**
@@ -83,4 +84,22 @@ export function getPaymentLinks(): PaymentLinks | null {
     if (link) links[id] = link;
   }
   return Object.keys(links).length > 0 ? links : null;
+}
+
+/**
+ * Checkout Transparente (pagamento dentro do site) fica ativo quando a Public Key
+ * do Mercado Pago está configurada. Tem prioridade sobre os links de pagamento.
+ */
+export function getMercadoPagoPublicKey(): string | null {
+  return parseMercadoPagoPublicKey(process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY);
+}
+
+export function isTransparentCheckout(): boolean {
+  return getMercadoPagoPublicKey() !== null;
+}
+
+/** Parcelas máximas para a interface (sem exigir o env completo). */
+export function getMaxInstallments(): number {
+  const n = Number.parseInt(process.env.MERCADOPAGO_MAX_INSTALLMENTS ?? "", 10);
+  return Number.isInteger(n) && n >= 1 && n <= 12 ? n : 12;
 }

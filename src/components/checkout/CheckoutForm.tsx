@@ -4,12 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PLATFORMS, PLATFORM_IDS } from "@/config/product";
-import { trackThenNavigate } from "@/lib/analytics/pixels";
+import { trackConversion, trackThenNavigate } from "@/lib/analytics/pixels";
 import { maskCpf } from "@/lib/validation/cpf";
 import { maskBrPhone } from "@/lib/validation/phone";
 import { checkoutSchema, type CheckoutData, type CheckoutInput } from "@/lib/validation/checkout";
 import { AlertIcon } from "../icons";
 import { OrderSummary } from "./OrderSummary";
+import { TransparentPayment } from "./transparent/TransparentPayment";
 
 type ApiError = { error?: string; fields?: Partial<Record<keyof CheckoutInput, string[]>> };
 
@@ -23,8 +24,15 @@ function isTrustedCheckoutUrl(value: unknown): value is string {
   }
 }
 
-export function CheckoutForm({ salesEnabled }: { salesEnabled: boolean }) {
+type Props = {
+  salesEnabled: boolean;
+  /** Presente quando o Checkout Transparente está ativo (pagamento dentro do site). */
+  transparent?: { publicKey: string; maxInstallments: number } | null;
+};
+
+export function CheckoutForm({ salesEnabled, transparent }: Props) {
   const [serverError, setServerError] = useState<string | null>(null);
+  const [paymentStep, setPaymentStep] = useState<{ orderId: string; email: string } | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   // Uma chave de idempotência por combinação (e-mail + plataforma): reenvios do
   // mesmo pedido reaproveitam a chave; mudar os dados gera um novo pedido.
@@ -59,7 +67,7 @@ export function CheckoutForm({ salesEnabled }: { salesEnabled: boolean }) {
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify(data),
       });
-      const json = (await response.json().catch(() => ({}))) as ApiError & { checkoutUrl?: unknown };
+      const json = (await response.json().catch(() => ({}))) as ApiError & { checkoutUrl?: unknown; orderId?: unknown };
 
       if (!response.ok) {
         if (json.fields) {
@@ -72,6 +80,13 @@ export function CheckoutForm({ salesEnabled }: { salesEnabled: boolean }) {
         return;
       }
 
+      // Checkout Transparente: pedido criado, segue para a etapa de pagamento no próprio site.
+      if (transparent && typeof json.orderId === "string" && !json.checkoutUrl) {
+        trackConversion("InitiateCheckout", { platform: PLATFORMS[data.platform].label });
+        setPaymentStep({ orderId: json.orderId, email: data.email });
+        return;
+      }
+
       if (!isTrustedCheckoutUrl(json.checkoutUrl)) {
         setServerError("Resposta inesperada do servidor. Tente novamente.");
         return;
@@ -81,6 +96,21 @@ export function CheckoutForm({ salesEnabled }: { salesEnabled: boolean }) {
     } catch {
       setServerError("Falha de conexão. Verifique sua internet e tente novamente.");
     }
+  }
+
+  if (paymentStep && transparent) {
+    return (
+      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+        <TransparentPayment
+          orderId={paymentStep.orderId}
+          email={paymentStep.email}
+          publicKey={transparent.publicKey}
+          maxInstallments={transparent.maxInstallments}
+          onBack={() => setPaymentStep(null)}
+        />
+        <OrderSummary platform={platform} />
+      </div>
+    );
   }
 
   return (
@@ -195,7 +225,9 @@ export function CheckoutForm({ salesEnabled }: { salesEnabled: boolean }) {
             {redirecting ? "Redirecionando ao pagamento…" : isSubmitting ? "Processando…" : "Finalizar compra"}
           </button>
           <p className="text-center text-xs text-zinc-500">
-            Você será direcionado ao ambiente seguro do Mercado Pago para pagar com PIX ou cartão.
+            {transparent
+              ? "Na próxima etapa você paga aqui mesmo, com PIX ou cartão de crédito, em ambiente seguro do Mercado Pago."
+              : "Você será direcionado ao ambiente seguro do Mercado Pago para pagar com PIX ou cartão."}
           </p>
         </fieldset>
       </form>

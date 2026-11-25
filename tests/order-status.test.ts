@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveOrderStatus, resultSlugFor, toCents } from "@/server/orders/status";
+import { deriveOrderStatus, isPayable, resultSlugFor, toCents } from "@/server/orders/status";
 
 const p = (status: string, amountMatches = true) => ({ status, amountMatches });
 
@@ -22,6 +22,15 @@ describe("deriveOrderStatus", () => {
     expect(deriveOrderStatus([p("refunded")])).toBe("REFUNDED");
     expect(deriveOrderStatus([p("charged_back")])).toBe("CHARGED_BACK");
     expect(deriveOrderStatus([p("in_process"), p("rejected")])).toBe("PENDING");
+  });
+
+  it("só permite nova tentativa de pagamento em pedidos não pagos", () => {
+    expect(isPayable("PENDING")).toBe(true);
+    expect(isPayable("REJECTED")).toBe(true);
+    expect(isPayable("CANCELLED")).toBe(true);
+    expect(isPayable("APPROVED")).toBe(false);
+    expect(isPayable("REFUNDED")).toBe(false);
+    expect(isPayable("CHARGED_BACK")).toBe(false);
   });
 
   it("converte valores e rotas corretamente", () => {
