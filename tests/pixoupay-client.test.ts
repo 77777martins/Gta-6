@@ -45,6 +45,17 @@ describe("cliente Pixoupay", () => {
     expect(body.buyer.phone).toBe("5511912345678");
   });
 
+  it("aceita QR Code com prefixo data URI e valor decimal", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ data: {
+      id: "390b5525-4629-4463-a32a-e0cd432d939b", status: "pending",
+      pix: { code: "00020126870014br.gov.bcb.pix", qrcode_base64: "data:image/png;base64,iVBORw0KGgo=" },
+      total_amount: 29990.0,
+    } }), { status: 201 })));
+    const charge = await createPixoupayCharge({ externalId: "p_1", amountCents: 29990, buyer: { name: "Maria da Silva", email: "m@e.com", document: "52998224725" }, productName: "GTA VI" });
+    expect(charge.pix.qrcode_base64).toBe("iVBORw0KGgo=");
+    expect(charge.total_amount).toBe(29990);
+  });
+
   it("transforma erro HTTP em erro de provedor sem vazar o corpo", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { message: "account_status_blocked", detail: "x" } }), { status: 403 })));
     await expect(getPixoupayTransaction("390b5525-4629-4463-a32a-e0cd432d939b")).rejects.toMatchObject({

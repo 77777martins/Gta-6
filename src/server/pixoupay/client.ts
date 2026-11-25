@@ -50,15 +50,22 @@ export type PixoupayStatus = (typeof PIXOUPAY_STATUSES)[number];
 const transactionSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(PIXOUPAY_STATUSES),
-  total_amount: z.number().int().nonnegative(),
-  created_at: z.string().optional(),
+  // Tolerante a valor decimal (ex.: 29990.0); arredonda para centavos inteiros.
+  total_amount: z.number().nonnegative().transform((v) => Math.round(v)),
+  created_at: z.string().nullish(),
 });
+
+/** Aceita base64 puro ou com prefixo "data:image/...;base64," (removido). */
+const base64Image = z
+  .string()
+  .transform((v) => v.replace(/^data:image\/[a-z+]+;base64,/i, "").replace(/\s+/g, ""))
+  .pipe(z.string().regex(/^[A-Za-z0-9+/=]+$/));
 
 const chargeResponseSchema = z.object({
   data: transactionSchema.extend({
     pix: z.object({
       code: z.string().min(10),
-      qrcode_base64: z.string().regex(/^[A-Za-z0-9+/=]+$/),
+      qrcode_base64: base64Image,
     }),
   }),
 });
@@ -93,7 +100,10 @@ export async function createPixoupayCharge(input: CreateChargeInput): Promise<Pi
     }),
   });
   const parsed = chargeResponseSchema.safeParse(json);
-  if (!parsed.success) throw new PaymentProviderError("Pixoupay /charge: resposta inesperada", 502);
+  if (!parsed.success) {
+    const fields = parsed.error.issues.map((i) => i.path.join(".")).join(", ");
+    throw new PaymentProviderError(`Pixoupay /charge: resposta inesperada (campos: ${fields})`, 502);
+  }
   return parsed.data.data;
 }
 
