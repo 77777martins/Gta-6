@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PLATFORMS, PLATFORM_IDS } from "@/config/product";
+import { trackThenNavigate } from "@/lib/analytics/pixels";
 import { maskCpf } from "@/lib/validation/cpf";
 import { maskBrPhone } from "@/lib/validation/phone";
 import { checkoutSchema, type CheckoutData, type CheckoutInput } from "@/lib/validation/checkout";
@@ -76,7 +77,7 @@ export function CheckoutForm({ salesEnabled }: { salesEnabled: boolean }) {
         return;
       }
       setRedirecting(true);
-      window.location.assign(json.checkoutUrl);
+      trackThenNavigate(json.checkoutUrl, PLATFORMS[data.platform].label);
     } catch {
       setServerError("Falha de conexão. Verifique sua internet e tente novamente.");
     }

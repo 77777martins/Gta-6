@@ -11,11 +11,13 @@ export function middleware(request: NextRequest) {
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    // 'strict-dynamic': scripts injetados pelo nosso código (pixels, após consentimento)
+    // são permitidos; os hosts abaixo valem só para navegadores sem suporte a ele.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://connect.facebook.net https://analytics.tiktok.com${isDev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://www.facebook.com https://*.tiktok.com",
     "font-src 'self'",
-    "connect-src 'self'",
+    "connect-src 'self' https://www.facebook.com https://connect.facebook.net https://*.tiktok.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

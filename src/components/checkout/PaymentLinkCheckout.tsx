@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@/config/product";
+import { trackThenNavigate } from "@/lib/analytics/pixels";
 import { AlertIcon } from "../icons";
 import { OrderSummary } from "./OrderSummary";
 
@@ -31,7 +32,7 @@ export function PaymentLinkCheckout({ salesEnabled, links, supportText }: Props)
     const link = links[platform];
     if (!link) return setError("Plataforma indisponível no momento.");
     setRedirecting(true);
-    window.location.assign(link);
+    trackThenNavigate(link, PLATFORMS[platform].label);
   }
 
   return (

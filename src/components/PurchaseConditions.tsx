@@ -14,7 +14,7 @@ export function PurchaseConditions() {
     },
     {
       title: "Privacidade (LGPD)",
-      text: "Usamos nome, e-mail e CPF exclusivamente para processar o pagamento, entregar o produto e emitir documentos fiscais. Não armazenamos dados de cartão.",
+      text: "Usamos nome, e-mail e CPF exclusivamente para processar o pagamento, entregar o produto e emitir documentos fiscais. Não armazenamos dados de cartão. Cookies de marketing (Meta e TikTok) só são ativados se você aceitar no aviso de cookies.",
     },
   ];
 

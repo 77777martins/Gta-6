@@ -122,6 +122,15 @@ Para trocar uma imagem, substitua o arquivo mantendo o nome. Para adicionar a ca
 
 > ⚠️ As artes são propriedade da Rockstar Games/Take-Two. Use somente com autorização (ex.: material de marketing fornecido ao revendedor).
 
+## Anúncios (Meta e TikTok)
+
+Defina `NEXT_PUBLIC_META_PIXEL_ID` e/ou `NEXT_PUBLIC_TIKTOK_PIXEL_ID` na Vercel e faça Redeploy.
+
+- Os pixels **só carregam após o visitante aceitar os cookies** (LGPD). Sem IDs configurados, nada é carregado e o aviso não aparece.
+- Eventos enviados: `PageView`, `ViewContent` (página de vendas), `InitiateCheckout` (clique em "Finalizar compra") e `Purchase`/`CompletePayment` (página de pagamento aprovado, apenas no modo integração completa — deduplicado pelo id do pedido).
+- No **modo link de pagamento**, a compra acontece no site do Mercado Pago e não volta para o site: otimize as campanhas para **InitiateCheckout**.
+- `NEXT_PUBLIC_META_DOMAIN_VERIFICATION` publica a meta tag de verificação de domínio da Meta.
+
 ## Segurança implementada
 
 - Credenciais apenas no servidor (`src/lib/env.ts` é `server-only` e validado com Zod).

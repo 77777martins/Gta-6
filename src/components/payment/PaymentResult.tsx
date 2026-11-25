@@ -5,6 +5,7 @@ import { supportChannelText } from "@/config/store";
 import { formatCents, formatDateTime, formatOrderNumber } from "@/lib/format";
 import type { PublicOrderView } from "@/server/orders/service";
 import { AlertIcon, CheckIcon, ClockIcon } from "../icons";
+import { PurchaseTracker } from "../analytics/PurchaseTracker";
 import { WhatsAppButton } from "../WhatsAppButton";
 import { StatusPoller } from "./StatusPoller";
 
@@ -110,6 +111,7 @@ export function PaymentResult({ order }: { order: PublicOrderView | null }) {
         )}
 
         {order?.status === "PENDING" && <StatusPoller orderId={order.id} />}
+        {order?.status === "APPROVED" && <PurchaseTracker orderId={order.id} />}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
           {canRetry && (
