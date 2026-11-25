@@ -97,11 +97,13 @@ npm run typecheck && npm run lint
 ## Deploy em produção
 
 1. Banco PostgreSQL gerenciado (Neon, Supabase, RDS, Railway…) com SSL.
-2. Configure **todas** as variáveis de `.env.example` no provedor, com **credenciais de produção** (`APP_USR-...`) e `APP_URL` em `https://`.
-3. Rode as migrações no pipeline de deploy: `npx prisma migrate deploy`.
-4. Cadastre o webhook de **produção** no painel do Mercado Pago (passo 4 acima).
-5. **Vercel:** importe o repositório; o build (`npm run build`) já gera o Prisma Client.
-   **Docker:** `docker build -t gta6-store . && docker run --env-file .env -p 3000:3000 gta6-store`.
+2. Configure **todas** as variáveis de `.env.example` no provedor (exceto `TZ` na Vercel, que é reservada), com `APP_URL` em `https://`.
+   - **Neon:** `DATABASE_URL` = string **com pooling** (`-pooler`) + `&pgbouncer=true&connect_timeout=15`; `DIRECT_URL` = string **sem pooling**.
+3. **Vercel:** importe o repositório. O script `vercel-build` roda `prisma generate && prisma migrate deploy && next build`, ou seja, **as migrações são aplicadas automaticamente a cada deploy** (só as pendentes).
+   - ⚠️ Cadastre `DATABASE_URL`/`DIRECT_URL` apenas no ambiente **Production** (ou use outro banco em Preview), para que deploys de preview não alterem o banco de produção.
+   **Docker:** rode `npx prisma migrate deploy` no pipeline e depois `docker build -t gta6-store . && docker run --env-file .env -p 3000:3000 gta6-store`.
+4. Cadastre o webhook no painel do Mercado Pago (teste e depois produção).
+5. Teste com credenciais `TEST-`, depois troque para produção (`APP_USR-...`).
 6. Só então `SALES_ENABLED=true`.
 
 ## Imagens
