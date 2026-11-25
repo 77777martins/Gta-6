@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { logger, maskEmail } from "@/lib/logger";
 import type { CheckoutData } from "@/lib/validation/checkout";
-import { createPreference, getPayment } from "@/server/mercadopago/client";
+import { createPreference, credentialFingerprint, getPayment } from "@/server/mercadopago/client";
 import { IdempotencyConflictError, SalesClosedError } from "./errors";
 import { deriveOrderStatus, toCents } from "./status";
 
@@ -82,11 +82,12 @@ async function ensurePreference(order: Order): Promise<CheckoutResult> {
     // Pedido já pago/finalizado: nunca gera novo link de pagamento para ele.
     throw new IdempotencyConflictError();
   }
-  if (order.mpPreferenceId && order.mpCheckoutUrl) {
+  // Só reaproveita o link se foi criado com a MESMA credencial (teste x produção).
+  if (order.mpPreferenceId && order.mpCheckoutUrl && order.mpCredentialFp === credentialFingerprint()) {
     return { orderId: order.id, checkoutUrl: order.mpCheckoutUrl };
   }
 
-  const { preferenceId, checkoutUrl } = await createPreference({
+  const { preferenceId, checkoutUrl, credentialFp } = await createPreference({
     orderId: order.id,
     item: { id: order.productSku, title: order.productName, unitPriceCents: order.unitPriceCents, currency: order.currency },
     payer: {
@@ -99,7 +100,7 @@ async function ensurePreference(order: Order): Promise<CheckoutResult> {
 
   await prisma.order.update({
     where: { id: order.id },
-    data: { mpPreferenceId: preferenceId, mpCheckoutUrl: checkoutUrl },
+    data: { mpPreferenceId: preferenceId, mpCheckoutUrl: checkoutUrl, mpCredentialFp: credentialFp },
   });
   return { orderId: order.id, checkoutUrl };
 }

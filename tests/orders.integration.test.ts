@@ -9,14 +9,19 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 const dbUrl = process.env.TEST_DATABASE_URL;
 
-vi.mock("@/server/mercadopago/client", () => ({
-  PaymentProviderError: class extends Error {},
-  createPreference: vi.fn(async ({ orderId }: { orderId: string }) => ({
-    preferenceId: `pref-${orderId}`,
-    checkoutUrl: `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-${orderId}`,
-  })),
-  getPayment: vi.fn(),
-}));
+vi.mock("@/server/mercadopago/client", () => {
+  const credentialFingerprint = vi.fn(() => "fp-teste");
+  return {
+    PaymentProviderError: class extends Error {},
+    credentialFingerprint,
+    createPreference: vi.fn(async ({ orderId }: { orderId: string }) => ({
+      preferenceId: `pref-${orderId}-${Math.random().toString(36).slice(2, 8)}`,
+      checkoutUrl: `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref-${orderId}`,
+      credentialFp: credentialFingerprint(),
+    })),
+    getPayment: vi.fn(),
+  };
+});
 
 describe.skipIf(!dbUrl)("pedidos (integração)", async () => {
   process.env.DATABASE_URL = dbUrl;
@@ -81,6 +86,19 @@ describe.skipIf(!dbUrl)("pedidos (integração)", async () => {
     const b = await createCheckout(input, randomUUID());
     expect(b.orderId).toBe(a.orderId);
     expect(await prisma.order.count()).toBe(1);
+  });
+
+  it("troca de credencial (teste -> produção) gera link novo para o pedido reaproveitado", async () => {
+    const a = await createCheckout(input, randomUUID());
+    const before = await prisma.order.findUniqueOrThrow({ where: { id: a.orderId } });
+    vi.mocked(mp.credentialFingerprint).mockReturnValue("fp-producao");
+    const b = await createCheckout(input, randomUUID());
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: b.orderId } });
+    expect(b.orderId).toBe(a.orderId);
+    expect(after.mpPreferenceId).not.toBe(before.mpPreferenceId);
+    expect(after.mpCredentialFp).toBe("fp-producao");
+    expect(mp.createPreference).toHaveBeenCalledTimes(2);
+    vi.mocked(mp.credentialFingerprint).mockReturnValue("fp-teste");
   });
 
   it("aprova o pedido quando o MP confirma o valor correto (idempotente)", async () => {

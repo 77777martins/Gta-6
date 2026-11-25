@@ -1,5 +1,6 @@
 import "server-only";
 import { MercadoPagoConfig, MercadoPagoError, MPConnectionError, Payment, Preference } from "mercadopago";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { env } from "@/lib/env";
 
@@ -40,6 +41,11 @@ function toProviderError(operation: string, error: unknown): PaymentProviderErro
   }
   const name = error instanceof Error ? error.name : "unknown";
   return new PaymentProviderError(`Mercado Pago ${operation}: falha de rede (${name})`, 503);
+}
+
+/** Impressão digital da credencial atual (SHA-256 truncado; nunca o token em si). */
+export function credentialFingerprint(): string {
+  return createHash("sha256").update(env().MERCADOPAGO_ACCESS_TOKEN).digest("hex").slice(0, 16);
 }
 
 export function isMercadoPagoHost(hostname: string): boolean {
@@ -101,8 +107,8 @@ export async function createPreference(input: CreatePreferenceInput) {
         expiration_date_to: expiresAt.toISOString(),
         metadata: { order_id: input.orderId },
       },
-      // Mesmo pedido => mesma chave: retries não criam preferências duplicadas.
-      requestOptions: { idempotencyKey: `pref-${input.orderId}` },
+      // Mesmo pedido + mesma credencial => mesma chave: retries não duplicam preferências.
+      requestOptions: { idempotencyKey: `pref-${input.orderId}-${credentialFingerprint()}` },
     });
   } catch (error) {
     throw toProviderError("criar preferência", error);
@@ -115,7 +121,11 @@ export async function createPreference(input: CreatePreferenceInput) {
   if (checkoutUrl.protocol !== "https:" || !isMercadoPagoHost(checkoutUrl.hostname)) {
     throw new PaymentProviderError("URL de checkout fora do domínio do Mercado Pago", 502);
   }
-  return { preferenceId: parsed.data.id, checkoutUrl: checkoutUrl.toString() };
+  return {
+    preferenceId: parsed.data.id,
+    checkoutUrl: checkoutUrl.toString(),
+    credentialFp: credentialFingerprint(),
+  };
 }
 
 // ---------- Pagamento ----------

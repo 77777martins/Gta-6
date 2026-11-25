@@ -53,6 +53,9 @@ model Order {
   status         OrderStatus @default(PENDING)
   mpPreferenceId String?     @unique @db.VarChar(128)
   mpCheckoutUrl  String?     @db.VarChar(512)
+  // Hash (não reversível) da credencial que criou a preferência. Se a credencial
+  // mudar (ex.: teste -> produção), o link antigo não é reaproveitado.
+  mpCredentialFp String?     @db.VarChar(16)
   paidAt         DateTime?
   fulfilledAt    DateTime?   // preenchido quando a equipe entregar o produto
 
