@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { PRODUCT } from "@/config/product";
 import { STORE } from "@/config/store";
+import heroImage from "@/assets/hero-gta6.jpg";
 import { formatCents } from "@/lib/format";
 import "./globals.css";
 
@@ -11,7 +12,13 @@ export const metadata: Metadata = {
   title: `${PRODUCT.shortName} | ${STORE.name}`,
   description,
   metadataBase: process.env.APP_URL ? new URL(process.env.APP_URL) : undefined,
-  openGraph: { title: PRODUCT.shortName, description, type: "website", locale: "pt_BR" },
+  openGraph: {
+    title: PRODUCT.shortName,
+    description,
+    type: "website",
+    locale: "pt_BR",
+    images: [{ url: heroImage.src, width: heroImage.width, height: heroImage.height }],
+  },
   robots: { index: true, follow: true },
 };
 

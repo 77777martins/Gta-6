@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    // Limita tamanhos gerados (menos processamento e cache em disco).
+    deviceSizes: [640, 828, 1080, 1280, 1920, 2560],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
