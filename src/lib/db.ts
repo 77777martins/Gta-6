@@ -1,0 +1,11 @@
+import "server-only";
+import { PrismaClient } from "@prisma/client";
+
+// Singleton: evita abrir um pool novo a cada hot-reload em desenvolvimento.
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({ log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"] });
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

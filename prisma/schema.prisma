@@ -1,0 +1,83 @@
+// Modelagem de pedidos e pagamentos.
+// Um pedido pode ter várias tentativas de pagamento (ex.: cartão recusado e
+// depois PIX aprovado na mesma preferência do Checkout Pro). Por isso os
+// pagamentos ficam em tabela própria e o status do pedido é DERIVADO deles.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING       // pedido criado, aguardando pagamento
+  APPROVED      // pagamento aprovado e validado no backend
+  REJECTED      // todas as tentativas recusadas
+  CANCELLED     // pagamento cancelado/expirado
+  REFUNDED      // estornado
+  CHARGED_BACK  // contestação (chargeback)
+}
+
+enum Platform {
+  PS5
+  XBOX_SERIES
+}
+
+model Order {
+  id             String      @id @default(uuid()) @db.Uuid
+  // Chave gerada no navegador por tentativa de checkout: impede pedidos duplicados
+  // em duplo clique, reenvio ou retry de rede.
+  idempotencyKey String      @unique @db.VarChar(64)
+
+  customerName   String      @db.VarChar(120)
+  customerEmail  String      @db.VarChar(254)
+  customerCpf    String      @db.Char(11)
+  platform       Platform
+
+  productSku     String      @db.VarChar(64)
+  productName    String      @db.VarChar(160)
+  unitPriceCents Int
+  quantity       Int         @default(1)
+  totalCents     Int
+  currency       String      @default("BRL") @db.Char(3)
+
+  status         OrderStatus @default(PENDING)
+  mpPreferenceId String?     @unique @db.VarChar(128)
+  mpCheckoutUrl  String?     @db.VarChar(512)
+  paidAt         DateTime?
+  fulfilledAt    DateTime?   // preenchido quando a equipe entregar o produto
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  payments       Payment[]
+
+  @@index([customerEmail, createdAt])
+  @@index([status, createdAt])
+}
+
+model Payment {
+  // ID do pagamento no Mercado Pago (numérico, armazenado como texto).
+  id                String   @id @db.VarChar(32)
+  orderId           String   @db.Uuid
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  status            String   @db.VarChar(32)
+  statusDetail      String?  @db.VarChar(64)
+  paymentMethodId   String?  @db.VarChar(32)
+  paymentTypeId     String?  @db.VarChar(32)
+  amountCents       Int
+  currency          String   @db.Char(3)
+  // false quando valor/moeda não batem com o pedido: nunca aprova o pedido.
+  amountMatches     Boolean
+  mpDateApproved    DateTime?
+  mpDateLastUpdated DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([orderId])
+}
