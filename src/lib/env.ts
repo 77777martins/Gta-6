@@ -13,10 +13,11 @@ const schema = z.object({
     .string()
     .url()
     .transform((v) => v.replace(/\/+$/, "")),
+  // Tolerante a maiúsculas, espaços e aspas digitados no painel ("True", " true ").
   SALES_ENABLED: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((v) => v === "true"),
+    .string()
+    .optional()
+    .transform((v) => parseBooleanFlag(v)),
   MERCADOPAGO_ACCESS_TOKEN: z.string().min(20),
   MERCADOPAGO_WEBHOOK_SECRET: z.string().min(16),
   MERCADOPAGO_MAX_INSTALLMENTS: z.coerce.number().int().min(1).max(12).default(12),
@@ -54,5 +55,11 @@ export function env(): Env {
  * continua exigindo o env completo e validado.
  */
 export function isSalesEnabled(): boolean {
-  return process.env.SALES_ENABLED === "true";
+  return parseBooleanFlag(process.env.SALES_ENABLED);
+}
+
+/** "true", "True", " TRUE ", "\"true\"" e "1" => true; qualquer outra coisa => false. */
+export function parseBooleanFlag(value: string | undefined): boolean {
+  const normalized = (value ?? "").trim().replace(/^["']|["']$/g, "").trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
 }
